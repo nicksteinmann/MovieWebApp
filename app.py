@@ -2,7 +2,7 @@ import os
 import requests
 from flask import Flask, render_template, request, redirect, url_for
 from data_manager import DataManager
-from models import db, Movie
+from models import db, Movie, User
 from dotenv import load_dotenv
 
 app = Flask(__name__)
@@ -37,8 +37,14 @@ def create_user():
 
 @app.route('/users/<int:user_id>/movies', methods=['GET'])
 def get_movies(user_id):
+    user = db.session.get(User, user_id)
     movies = data_manager.get_movies(user_id)
-    return render_template('movies.html', movies=movies, user_id=user_id)
+    return render_template(
+        'movies.html',
+        movies=movies,
+        user_id=user_id,
+        user_name=user.name if user else None
+    )
 
 
 @app.route('/users/<int:user_id>/movies', methods=['POST'])
@@ -46,25 +52,39 @@ def add_movie(user_id):
     title = request.form.get('title')
 
     if title:
-        url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}"
-        response = requests.get(url)
-        data = response.json()
+        try:
+            existing_movie = Movie.query.filter_by(user_id=user_id, name=title).first()
+            if existing_movie:
+                return redirect(url_for('get_movies', user_id=user_id))
 
-        if data.get("Response") == "True":
-            year_value = data.get("Year")
-            try:
-                year_value = int(year_value[:4]) if year_value else None
-            except ValueError:
-                year_value = None
+            url = f"http://www.omdbapi.com/?apikey={OMDB_API_KEY}&t={title}"
+            response = requests.get(url)
+            data = response.json()
 
-            new_movie = Movie(
-                name=data.get("Title"),
-                director=data.get("Director"),
-                year=year_value,
-                poster_url=data.get("Poster") if data.get("Poster") != "N/A" else "",
-                user_id=user_id
-            )
-            data_manager.add_movie(new_movie)
+            if data.get("Response") == "True":
+                movie_title = data.get("Title")
+
+                duplicate_movie = Movie.query.filter_by(user_id=user_id, name=movie_title).first()
+                if duplicate_movie:
+                    return redirect(url_for('get_movies', user_id=user_id))
+
+                year_value = data.get("Year")
+                try:
+                    year_value = int(year_value[:4]) if year_value else None
+                except ValueError:
+                    year_value = None
+
+                new_movie = Movie(
+                    name=movie_title,
+                    director=data.get("Director"),
+                    year=year_value,
+                    poster_url=data.get("Poster") if data.get("Poster") != "N/A" else "",
+                    user_id=user_id
+                )
+                data_manager.add_movie(new_movie)
+
+        except Exception as e:
+            print(f"Error adding movie: {e}")
 
     return redirect(url_for('get_movies', user_id=user_id))
 
@@ -81,6 +101,17 @@ def update_movie(user_id, movie_id):
 def delete_movie(user_id, movie_id):
     data_manager.delete_movie(movie_id)
     return redirect(url_for('get_movies', user_id=user_id))
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+
+@app.route('/users/<int:user_id>/delete', methods=['POST'])
+def delete_user(user_id):
+    data_manager.delete_user(user_id)
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':

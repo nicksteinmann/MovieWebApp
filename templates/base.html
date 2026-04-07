@@ -2,23 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>MoviWeb App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieWeb App</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-
-<header>
-    <h1>🎬 MoviWeb App</h1>
+<header class="site-header">
+    <a href="{{ url_for('index') }}" class="logo-link">🎬 MovieApp</a>
 </header>
 
-<nav>
-    <a href="/">Home</a>
-</nav>
-
 <main class="container">
-    {% block content %}
-    {% endblock %}
+    {% block content %}{% endblock %}
 </main>
 
+<footer>
+    <p>© 2025 MovieApp. All rights reserved.</p>
+</footer>
 </body>
 </html>

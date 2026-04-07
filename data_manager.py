@@ -28,3 +28,10 @@ class DataManager:
         if movie:
             db.session.delete(movie)
             db.session.commit()
+
+    def delete_user(self, user_id):
+        user = db.session.get(User, user_id)
+        if user:
+            Movie.query.filter_by(user_id=user_id).delete()
+            db.session.delete(user)
+            db.session.commit()
