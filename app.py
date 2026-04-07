@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, render_template, request, redirect, url_for
 from data_manager import DataManager
 from models import db, Movie
 
@@ -15,14 +15,22 @@ data_manager = DataManager()
 
 
 @app.route('/')
-def home():
-    return "Welcome to MoviWeb App!"
-
-
-@app.route('/users')
-def list_users():
+def index():
     users = data_manager.get_users()
-    return str(users)
+    return render_template('index.html', users=users)
+
+
+@app.route('/users', methods=['POST'])
+def create_user():
+    name = request.form.get('name')
+    if name:
+        data_manager.create_user(name)
+    return redirect(url_for('index'))
+
+
+@app.route('/users/<int:user_id>/movies')
+def get_movies(user_id):
+    return f"Movies for user {user_id}"
 
 
 if __name__ == '__main__':
